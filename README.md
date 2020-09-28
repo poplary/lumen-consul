@@ -1,4 +1,4 @@
-# RPC-client
+# Lumen Consul Client
 
 ## 安装
 
