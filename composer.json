@@ -6,7 +6,7 @@
     "require": {
         "php": ">=7.2.5",
         "poplary/consul-sdk": "^0.1",
-        "guzzlehttp/guzzle": "^6.0",
+        "guzzlehttp/guzzle": "^6.0|^7.0",
         "laravel/lumen-framework": "^7.0|^8.0",
         "psr/log": "~1.0"
     },
