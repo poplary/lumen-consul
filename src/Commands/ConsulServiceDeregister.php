@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Poplary\LumenConsul\Commands;
 
-use Poplary\Consul\ConsulResponse;
-use Poplary\Consul\ServiceFactory;
-use Poplary\Consul\Services\AgentInterface;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Config;
+use Poplary\Consul\ConsulResponse;
+use Poplary\LumenConsul\Facades\ConsulAgent;
 
 /**
  * Class ConsulServiceDeregister.
@@ -34,13 +36,10 @@ class ConsulServiceDeregister extends Command
     public function handle()
     {
         try {
-            $consulUrls = explode(',', config('consul.base_uris'));
+            $consulUrls = explode(',', Config::get('consul.base_uris'));
             foreach ($consulUrls as $consulUrl) {
                 $this->comment('Consul HTTP 地址:');
                 $this->line(sprintf(' - <info>%s</info>', $consulUrl));
-                $serviceFactory = new ServiceFactory(['base_uri' => $consulUrl]);
-                /* @var AgentInterface $agent */
-                $agent = $serviceFactory->get(AgentInterface::class);
 
                 $serviceId = $this->argument('service_id');
 
@@ -48,7 +47,7 @@ class ConsulServiceDeregister extends Command
                 $this->line(sprintf(' - ID: <info>%s</info>', $serviceId));
 
                 /** @var ConsulResponse $response */
-                $response = $agent->deregisterService($serviceId);
+                $response = ConsulAgent::deregisterService($serviceId);
 
                 $this->line(sprintf(' - 取消注册结果: <info>%s</info>', json_encode($response->getBody())));
                 $this->output->newLine();

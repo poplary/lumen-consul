@@ -1,22 +1,25 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Poplary\LumenConsul\Facades;
 
+use Poplary\Consul\ConsulResponse;
 use Poplary\Consul\Services\CatalogInterface;
 use Illuminate\Support\Facades\Facade;
 
 /**
  * Class ConsulAgent.
  *
- * @see CatalogInterface
+ * @mixin CatalogInterface
  *
- * @method static register($node)
- * @method static deregister($node)
- * @method static datacenters()
- * @method static nodes(array $options = [])
- * @method static node($node, array $options = [])
- * @method static services(array $options = [])
- * @method static service($service, array $options = [])
+ * @method static ConsulResponse register($node)
+ * @method static ConsulResponse deregister($node)
+ * @method static ConsulResponse datacenters()
+ * @method static ConsulResponse nodes(array $options = [])
+ * @method static ConsulResponse node($node, array $options = [])
+ * @method static ConsulResponse services(array $options = [])
+ * @method static ConsulResponse service($service, array $options = [])
  */
 class ConsulCatalog extends Facade
 {

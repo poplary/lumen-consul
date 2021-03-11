@@ -1,10 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Poplary\LumenConsul\Commands;
 
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Config;
 use Poplary\Consul\ConsulResponse;
 use Poplary\LumenConsul\Facades\ConsulCatalog;
-use Illuminate\Console\Command;
+use RuntimeException;
 
 /**
  * Class ConsulServiceList.
@@ -34,7 +38,7 @@ class ConsulServiceList extends Command
     {
         try {
             $this->comment('Consul HTTP 地址:');
-            $this->line(sprintf(' - <info>%s</info>', config('consul.base_uri')));
+            $this->line(sprintf(' - <info>%s</info>', Config::get('consul.base_uri')));
             $this->output->newLine();
 
             $this->comment('Services:');
@@ -42,7 +46,7 @@ class ConsulServiceList extends Command
             /** @var ConsulResponse $response */
             $response = ConsulCatalog::services();
             if (200 !== $response->getStatusCode()) {
-                throw new \Exception('出错了！响应的 status 不为 200.');
+                throw new RuntimeException('出错了！响应的 status 不为 200.');
             }
 
             $services = json_decode($response->getBody(), true);

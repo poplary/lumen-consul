@@ -1,11 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Poplary\LumenConsul;
 
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 use Poplary\Consul\ServiceFactory;
 use Poplary\Consul\Services\AgentInterface;
 use Poplary\Consul\Services\CatalogInterface;
-use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 
 /**
  * Class ServiceProvider.
@@ -47,11 +51,11 @@ class ServiceProvider extends BaseServiceProvider
     /**
      * ServiceFactory 单例.
      */
-    protected function registerConsulServiceFactory()
+    protected function registerConsulServiceFactory(): void
     {
         $this->app->singleton('consul.service.factory', function () {
             return new ServiceFactory([
-                'base_uri' => config('consul.base_uri'),
+                'base_uri' => Config::get('consul.base_uri'),
             ]);
         });
     }
@@ -59,20 +63,20 @@ class ServiceProvider extends BaseServiceProvider
     /**
      * CatalogService 单例.
      */
-    protected function registerConsulCatalogService()
+    protected function registerConsulCatalogService(): void
     {
-        $this->app->singleton('consul.service.catalog', function () {
-            return app('consul.service.factory')->get(CatalogInterface::class);
+        $this->app->singleton('consul.service.catalog', function (Application $app) {
+            return $app->get('consul.service.factory')->get(CatalogInterface::class);
         });
     }
 
     /**
      * AgentService 单例.
      */
-    protected function registerConsulAgentService()
+    protected function registerConsulAgentService(): void
     {
-        $this->app->singleton('consul.service.agent', function () {
-            return app('consul.service.factory')->get(AgentInterface::class);
+        $this->app->singleton('consul.service.agent', function (Application $app) {
+            return $app->get('consul.service.factory')->get(AgentInterface::class);
         });
     }
 }
