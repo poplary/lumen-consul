@@ -66,7 +66,7 @@ $rules = [
     'explicit_string_variable' => true,
 ];
 
-return PhpCsFixer\Config::create()
+return (new PhpCsFixer\Config())
     ->setRules($rules)
     ->setRiskyAllowed(false)
     ->setFinder($finder)
