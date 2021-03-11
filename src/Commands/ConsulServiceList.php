@@ -6,9 +6,9 @@ namespace Poplary\LumenConsul\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Config;
-use Poplary\Consul\ConsulResponse;
 use Poplary\LumenConsul\Facades\ConsulCatalog;
 use RuntimeException;
+use Throwable;
 
 /**
  * Class ConsulServiceList.
@@ -43,26 +43,28 @@ class ConsulServiceList extends Command
 
             $this->comment('Services:');
 
-            /** @var ConsulResponse $response */
             $response = ConsulCatalog::services();
             if (200 !== $response->getStatusCode()) {
-                throw new RuntimeException('出错了！响应的 status 不为 200.');
+                throw new RuntimeException(sprintf('[%s] Response error: %s', $response->getStatusCode(), $response->getBody()));
             }
 
             $services = json_decode($response->getBody(), true);
-
             if (empty($services)) {
-                $this->error(' - 查询不到注册的服务.');
+                throw new RuntimeException('No service found.');
             }
 
+            $rows = [];
             foreach ($services as $consulService) {
-                $this->line(sprintf('  - 服务名称: <info>%s</info>', $consulService['Service']));
-                $this->line(sprintf('  - ID: <info>%s</info>', $consulService['ID']));
-                $this->line(sprintf('  - 地址: <info>%s</info>', $consulService['Address']));
-                $this->line(sprintf('  - 端口: <info>%s</info>', $consulService['Port']));
-                $this->output->newLine();
+                $rows[] = [
+                    $consulService['Service'],
+                    $consulService['ID'],
+                    $consulService['Address'],
+                    $consulService['Port'],
+                ];
             }
-        } catch (\Throwable $exception) {
+
+            $this->table(['Service', 'Service ID', 'Address', 'Port'], $rows);
+        } catch (Throwable $exception) {
             $this->error($exception->getMessage());
         }
 

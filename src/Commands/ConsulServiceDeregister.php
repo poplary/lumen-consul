@@ -6,8 +6,11 @@ namespace Poplary\LumenConsul\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
 use Poplary\Consul\ConsulResponse;
-use Poplary\LumenConsul\Facades\ConsulAgent;
+use Poplary\Consul\ServiceFactory;
+use Poplary\Consul\Services\AgentInterface;
+use Throwable;
 
 /**
  * Class ConsulServiceDeregister.
@@ -37,23 +40,29 @@ class ConsulServiceDeregister extends Command
     {
         try {
             $consulUrls = explode(',', Config::get('consul.base_uris'));
+
             foreach ($consulUrls as $consulUrl) {
-                $this->comment('Consul HTTP 地址:');
-                $this->line(sprintf(' - <info>%s</info>', $consulUrl));
+                $serviceFactory = new ServiceFactory(['base_uri' => $consulUrl]);
+                /* @var AgentInterface $agent */
+                $agent = $serviceFactory->get(AgentInterface::class);
 
                 $serviceId = $this->argument('service_id');
 
-                $this->comment('取消注册服务:');
-                $this->line(sprintf(' - ID: <info>%s</info>', $serviceId));
-
                 /** @var ConsulResponse $response */
-                $response = ConsulAgent::deregisterService($serviceId);
+                $response = $agent->deregisterService($serviceId);
 
-                $this->line(sprintf(' - 取消注册结果: <info>%s</info>', json_encode($response->getBody())));
-                $this->output->newLine();
+                Log::info('Deregister result: '.json_encode($response->getBody()), [
+                    'type' => 'consul_deregister',
+                    'consul_url' => $consulUrl,
+                    'service_id' => $serviceId,
+                ]);
             }
-        } catch (\Throwable $exception) {
-            $this->error($exception->getMessage());
+        } catch (Throwable $exception) {
+            Log::info($exception->getMessage(), [
+                'type' => 'consul_deregister',
+                'exception' => $exception,
+                'config' => Config::get('consul'),
+            ]);
         }
 
         return 0;

@@ -6,7 +6,10 @@ namespace Poplary\LumenConsul\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Config;
-use Poplary\LumenConsul\Facades\ConsulAgent;
+use Illuminate\Support\Facades\Log;
+use Poplary\Consul\ConsulResponse;
+use Poplary\Consul\ServiceFactory;
+use Poplary\Consul\Services\AgentInterface;
 use RuntimeException;
 use Throwable;
 
@@ -39,29 +42,31 @@ class ConsulServiceRegister extends Command
         try {
             $consulUrls = explode(',', Config::get('consul.base_uris'));
             $services = Config::get('consul.services');
-
             foreach ($consulUrls as $consulUrl) {
-                $this->comment('Consul HTTP 地址:');
-                $this->line(sprintf(' - <info>%s</info>', $consulUrl));
+                $serviceFactory = new ServiceFactory(['base_uri' => $consulUrl]);
+                /* @var AgentInterface $agent */
+                $agent = $serviceFactory->get(AgentInterface::class);
 
                 foreach ($services as $consulService) {
-                    $this->comment('注册服务:');
-                    $this->line(sprintf(' - 服务名称: <info>%s</info>', $consulService['Name']));
-                    $this->line(sprintf(' - ID: <info>%s</info>', $consulService['ID']));
-                    $this->line(sprintf(' - 地址: <info>%s</info>', $consulService['Address']));
-                    $this->line(sprintf(' - 端口: <info>%s</info>', $consulService['Port']));
-
-                    $response = ConsulAgent::registerService($consulService);
+                    /** @var ConsulResponse $response */
+                    $response = $agent->registerService($consulService);
                     if (200 !== $response->getStatusCode()) {
-                        throw new RuntimeException('注册失败');
+                        throw new RuntimeException(sprintf('Service [%s] registered to consul (%s) failed.', $consulService['ID'], $consulUrl));
                     }
-                    $this->info(' √ 注册成功.');
-                    $this->output->newLine();
+
+                    Log::info('Registered successfully.', [
+                        'type' => 'consul_register',
+                        'consul_url' => $consulUrl,
+                        'service' => $consulService,
+                    ]);
                 }
-                $this->output->newLine();
             }
         } catch (Throwable $exception) {
-            $this->error(' x 注册失败.'.$exception->getMessage());
+            Log::info($exception->getMessage(), [
+                'type' => 'consul_register',
+                'exception' => $exception,
+                'config' => Config::get('consul'),
+            ]);
         }
 
         return 0;
