@@ -6,7 +6,8 @@ namespace Poplary\LumenConsul\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Config;
-use Poplary\LumenConsul\Facades\ConsulCatalog;
+use Poplary\Consul\ServiceFactory;
+use Poplary\Consul\Services\AgentInterface;
 use RuntimeException;
 use Throwable;
 
@@ -37,33 +38,40 @@ class ConsulServiceList extends Command
     public function handle()
     {
         try {
-            $this->comment('Consul HTTP 地址:');
-            $this->line(sprintf(' - <info>%s</info>', Config::get('consul.base_uri')));
+            $this->info('Consul Services:');
             $this->output->newLine();
 
-            $this->comment('Services:');
+            $consulUrls = explode(',', Config::get('consul.base_uris'));
+            foreach ($consulUrls as $consulUrl) {
+                $this->comment("Consul url: {$consulUrl}");
 
-            $response = ConsulCatalog::services();
-            if (200 !== $response->getStatusCode()) {
-                throw new RuntimeException(sprintf('[%s] Response error: %s', $response->getStatusCode(), $response->getBody()));
+                $serviceFactory = new ServiceFactory(['base_uri' => $consulUrl]);
+                /* @var AgentInterface $agent */
+                $agent = $serviceFactory->get(AgentInterface::class);
+
+                $response = $agent->services();
+                if (200 !== $response->getStatusCode()) {
+                    throw new RuntimeException(sprintf('[%s] Response error: %s', $response->getStatusCode(), $response->getBody()));
+                }
+
+                $services = json_decode($response->getBody(), true);
+                if (empty($services)) {
+                    throw new RuntimeException('No service found.');
+                }
+
+                $rows = [];
+                foreach ($services as $consulService) {
+                    $rows[] = [
+                        $consulService['Service'],
+                        $consulService['ID'],
+                        $consulService['Address'].':'.$consulService['Port'],
+                    ];
+                }
+
+                $this->table(['Service', 'Service ID', 'Address'], $rows);
+                $this->output->newLine();
             }
-
-            $services = json_decode($response->getBody(), true);
-            if (empty($services)) {
-                throw new RuntimeException('No service found.');
-            }
-
-            $rows = [];
-            foreach ($services as $consulService) {
-                $rows[] = [
-                    $consulService['Service'],
-                    $consulService['ID'],
-                    $consulService['Address'],
-                    $consulService['Port'],
-                ];
-            }
-
-            $this->table(['Service', 'Service ID', 'Address', 'Port'], $rows);
+            $this->output->newLine();
         } catch (Throwable $exception) {
             $this->error($exception->getMessage());
         }
